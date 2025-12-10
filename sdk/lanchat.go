@@ -19,7 +19,7 @@ func New(ctx context.Context, nickname string, handler EventHandler, logger Logg
 	}
 
 	if handler == nil {
-		handler = &defaultEventHandler{}
+		handler = &BaseEventHandler{}
 	}
 
 	if logger == nil {

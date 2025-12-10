@@ -329,6 +329,10 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		return err
 	}
 
+	if peerID == a.host.ID() {
+		return nil
+	}
+
 	if !a.rateLimiter.Allow(peerID) {
 		logger.Warn("Rate limit exceeded for peer %s", peerID.String()[:8])
 		return nil
@@ -470,17 +474,6 @@ func (a *App) SendMessage(text string) error {
 	if err := a.topic.Publish(p2p.MessageTypeChat, msg); err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
-
-	chatMsg := &ChatMessage{
-		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		From:      a.host.ID(),
-		Nickname:  a.user.Nickname,
-		Content:   text,
-		Timestamp: time.Now(),
-		Type:      MessageTypeText,
-	}
-	a.currentRoom.Messages = append(a.currentRoom.Messages, chatMsg)
-	a.events <- Event{Type: EventMessageRecv, Data: chatMsg}
 
 	return nil
 }

@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/matt0792/lanchat/internal/app"
@@ -138,19 +137,10 @@ type EventHandler interface {
 	HandleRoomJoined(*Room)
 }
 
-type defaultEventHandler struct{}
+type BaseEventHandler struct{}
 
-func (h *defaultEventHandler) HandleMessageRecv(msg *ChatMessage) {
-	fmt.Println("message received:")
-	fmt.Println(msg)
-}
+func (h *BaseEventHandler) HandleMessageRecv(msg *ChatMessage) {}
 
-func (h *defaultEventHandler) HandlePeerJoined(peerInfo *PeerInfo) {
-	fmt.Println("peer joined:")
-	fmt.Println(peerInfo)
-}
+func (h *BaseEventHandler) HandlePeerJoined(peerInfo *PeerInfo) {}
 
-func (h *defaultEventHandler) HandleRoomJoined(room *Room) {
-	fmt.Println("room joined:")
-	fmt.Println(room)
-}
+func (h *BaseEventHandler) HandleRoomJoined(room *Room) {}
