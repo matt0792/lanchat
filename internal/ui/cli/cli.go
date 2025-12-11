@@ -26,42 +26,67 @@ func New(ctx context.Context) *CLI {
 	}
 }
 
+// clearLine clears the current terminal line and returns cursor to start
+func clearLine() {
+	fmt.Print("\r\033[K")
+}
+
 func (c *CLI) ShowMessage(nickname, message string) {
-	fmt.Printf("\r\033[K%s: %s\n", nickname, message)
+	clearLine()
+	fmt.Printf("<%s> %s\n", nickname, message)
 	c.ShowPrompt()
 }
 
 func (c *CLI) ShowSystemMessage(message string) {
-	fmt.Printf("\r\033[K%s\n", message)
+	clearLine()
+	fmt.Printf("* %s\n", message)
 	c.ShowPrompt()
 }
 
 func (c *CLI) ShowPeerJoined(nickname string) {
-	fmt.Printf("\r\033[K%s connected\n", nickname)
+	clearLine()
+	fmt.Printf("→ %s joined\n", nickname)
+	c.ShowPrompt()
+}
+
+func (c *CLI) ShowPeerLeft(nickname string) {
+	clearLine()
+	fmt.Printf("← %s left\n", nickname)
 	c.ShowPrompt()
 }
 
 func (c *CLI) ShowPeerList(peers []string) {
-	fmt.Printf("\nConnected peers (%d):\n", len(peers))
-	for _, p := range peers {
-		fmt.Printf("  - %s \n", p)
+	clearLine()
+	if len(peers) == 0 {
+		fmt.Println("No peers connected")
+	} else {
+		fmt.Printf("Connected peers (%d):\n", len(peers))
+		for _, p := range peers {
+			fmt.Printf("  %s\n", p)
+		}
 	}
 	fmt.Println()
+	c.ShowPrompt()
 }
 
 func (c *CLI) ShowRoomList(rooms []string) {
+	clearLine()
 	if len(rooms) == 0 {
-		fmt.Println("No active rooms found")
-		return
+		fmt.Println("No active rooms")
+	} else {
+		fmt.Printf("Available rooms (%d):\n", len(rooms))
+		for _, room := range rooms {
+			fmt.Printf("  %s\n", room)
+		}
 	}
-	fmt.Println("Available rooms:")
-	for _, room := range rooms {
-		fmt.Printf("  - %s\n", room)
-	}
+	fmt.Println()
+	c.ShowPrompt()
 }
 
 func (c *CLI) ShowError(err error) {
-	fmt.Printf("Error: %v\n", err)
+	clearLine()
+	fmt.Printf("! %v\n", err)
+	c.ShowPrompt()
 }
 
 func (c *CLI) ShowPrompt() {
@@ -73,13 +98,7 @@ func (c *CLI) OnCommand(handler ui.CommandHandler) {
 }
 
 func (c *CLI) Start() error {
-	fmt.Println("\nCommands:")
-	fmt.Println("  /join <room>  - Join a room")
-	fmt.Println("  /leave        - Leave current room")
-	fmt.Println("  /peers        - List connected peers")
-	fmt.Println("  /rooms        - List available rooms")
-	fmt.Println("  /quit         - Exit")
-	fmt.Println()
+	c.showWelcome()
 
 	for {
 		select {
@@ -110,6 +129,18 @@ func (c *CLI) Start() error {
 	}
 }
 
+func (c *CLI) showWelcome() {
+	fmt.Println("lanchat v1.0")
+	fmt.Println()
+	fmt.Println("Commands:")
+	fmt.Println("  /join <room>    Join a room")
+	fmt.Println("  /leave          Leave current room")
+	fmt.Println("  /peers          List connected peers")
+	fmt.Println("  /rooms          List available rooms")
+	fmt.Println("  /quit           Exit")
+	fmt.Println()
+}
+
 func (c *CLI) Stop() {
 	c.cancel()
 }
@@ -123,7 +154,6 @@ func (c *CLI) parseInput(input string) ui.Command {
 		}
 	}
 
-	// Regular message
 	return ui.Command{
 		Type: "send",
 		Args: []string{input},

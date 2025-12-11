@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os/signal"
 	"syscall"
@@ -11,13 +10,9 @@ import (
 	"github.com/matt0792/lanchat/internal/logger"
 	"github.com/matt0792/lanchat/internal/ui"
 	"github.com/matt0792/lanchat/internal/ui/cli"
-	"github.com/matt0792/lanchat/internal/ui/tui"
 )
 
 func main() {
-	useTUI := flag.Bool("tui", false, "Start app with TUI")
-	flag.Parse()
-
 	logger.SetLevel(logger.LevelNone)
 
 	ctx, cancel := signal.NotifyContext(
@@ -36,12 +31,9 @@ func main() {
 	}
 	defer chatApp.Close()
 
+	// TODO hot-swap ui
 	var userInterface ui.UI
-	if *useTUI {
-		userInterface = tui.New(ctx)
-	} else {
-		userInterface = cli.New(ctx)
-	}
+	userInterface = cli.New(ctx)
 
 	controller := ui.NewController(ctx, chatApp, userInterface)
 

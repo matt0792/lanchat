@@ -4,6 +4,7 @@ type UI interface {
 	ShowMessage(nickname, message string)
 	ShowSystemMessage(message string)
 	ShowPeerJoined(nickname string)
+	ShowPeerLeft(nickname string)
 	ShowPeerList(peers []string)
 	ShowRoomList(rooms []string)
 	ShowError(err error)

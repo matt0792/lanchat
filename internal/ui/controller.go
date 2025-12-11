@@ -96,15 +96,15 @@ func (c *Controller) handleAppEvents() {
 			switch msg.Type {
 			case app.MessageTypeText:
 				c.ui.ShowMessage(msg.Nickname, msg.Content)
-			case app.MessageTypeJoin:
-				c.ui.ShowSystemMessage(msg.Content)
-			case app.MessageTypeLeave:
-				c.ui.ShowSystemMessage(msg.Content)
 			}
 
 		case app.EventPeerJoined:
 			peer := event.Data.(*app.PeerInfo)
 			c.ui.ShowPeerJoined(peer.Nickname)
+
+		case app.EventPeerLeft:
+			peer := event.Data.(*app.PeerInfo)
+			c.ui.ShowPeerLeft(peer.Nickname)
 
 		case app.EventRoomJoined:
 			room := event.Data.(*app.Room)
