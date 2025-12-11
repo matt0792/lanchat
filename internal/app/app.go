@@ -312,6 +312,35 @@ func (a *App) GetPeers() []*PeerInfo {
 	return peers
 }
 
+func (a *App) MutePeer(nickname string) error {
+	a.peersMu.Lock()
+	defer a.peersMu.Unlock()
+
+	for id, peer := range a.peers {
+		if peer.Nickname == nickname {
+			if peer.Metadata == nil {
+				peer.Metadata = make(map[string]string)
+			}
+			peer.Metadata["is_muted"] = "true"
+			a.peers[id] = peer
+			return nil
+		}
+	}
+
+	return fmt.Errorf("peer %s not found", nickname)
+}
+
+func (a *App) isPeerMuted(peerId peer.ID) bool {
+	peers := a.GetPeers()
+
+	for _, p := range peers {
+		if value, exists := p.Metadata["is_muted"]; exists {
+			return value == "true"
+		}
+	}
+	return false
+}
+
 func (a *App) Close() error {
 	logger.Info("Closing app")
 
@@ -336,6 +365,10 @@ func (a *App) handlePeerDiscovery() {
 }
 
 func (a *App) onPeerDiscovered(peerInfo peer.AddrInfo) {
+	if a.isPeerMuted(peerInfo.ID) {
+		return
+	}
+
 	logger.Debug("Peer discovered: %s", peerInfo.ID.String()[:8])
 
 	time.Sleep(500 * time.Millisecond)
@@ -394,6 +427,11 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	if err != nil {
 		logger.Warn("Invalid peer ID in message: %v", err)
 		return err
+	}
+
+	if a.isPeerMuted(peerID) {
+		logger.Info("Muted message from peer: %s", peerID.String()[:8])
+		return nil
 	}
 
 	if !a.rateLimiter.Allow(peerID) {
@@ -506,7 +544,6 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 }
 
 func sanitize(text string) string {
-
 	return strings.Map(func(r rune) rune {
 		if strings.ContainsRune(allowed, r) {
 			return r
