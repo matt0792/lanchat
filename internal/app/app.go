@@ -396,10 +396,6 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		return err
 	}
 
-	// if peerID == a.host.ID() {
-	// 	return nil
-	// }
-
 	if !a.rateLimiter.Allow(peerID) {
 		logger.Warn("Rate limit exceeded for peer %s", peerID.String()[:8])
 		return nil
@@ -477,7 +473,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 			decrypted, err := Decrypt(text, a.currentRoom.EncryptionKey)
 			if err != nil {
 				logger.Warn("Failed to decrypt message from %s (wrong password?): %w", nickname, err)
-				text = ""
+				return nil
 			} else {
 				text = decrypted
 			}
