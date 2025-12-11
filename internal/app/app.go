@@ -107,59 +107,6 @@ func NewApp(ctx context.Context, nickname string) (*App, error) {
 	return app, nil
 }
 
-func (a *App) handlePeerDiscovery() {
-	for {
-		select {
-		case <-a.ctx.Done():
-			return
-		case peerInfo := <-a.host.GetPeerChan():
-			go a.onPeerDiscovered(peerInfo)
-		}
-	}
-}
-
-func (a *App) onPeerDiscovered(peerInfo peer.AddrInfo) {
-	logger.Debug("Peer discovered: %s", peerInfo.ID.String()[:8])
-
-	time.Sleep(500 * time.Millisecond)
-
-	md, err := a.host.RequestPeerMetadata(peerInfo.ID)
-	if err != nil {
-		logger.Warn("Failed to get metadata from peer %s: %v", peerInfo.ID.String()[:8], err)
-		return
-	}
-
-	nickname := sanitize(md.Nickname)
-	if len(nickname) == 0 {
-		nickname = "Unknown"
-	}
-	if len(nickname) > maxNicknameLength {
-		nickname = nickname[:maxNicknameLength]
-	}
-
-	status := md.Custom["status"]
-	if len(status) > 50 {
-		status = status[:50]
-	}
-
-	a.peersMu.Lock()
-	a.peers[peerInfo.ID] = &PeerInfo{
-		ID:       peerInfo.ID,
-		Nickname: nickname,
-		Status:   status,
-		LastSeen: time.Now(),
-		Metadata: md.Custom,
-	}
-	a.peersMu.Unlock()
-
-	logger.Info("Peer %s connected: %s", peerInfo.ID.String()[:8], md.Nickname)
-
-	a.events <- Event{
-		Type: EventPeerJoined,
-		Data: a.peers[peerInfo.ID],
-	}
-}
-
 func (a *App) JoinRoom(roomName, password string) error {
 	roomName = sanitize(roomName)
 	if len(roomName) == 0 {
@@ -310,6 +257,126 @@ func (a *App) GetPeerList() []string {
 	return peerList
 }
 
+func (a *App) SendMessage(text string) error {
+	if a.currentRoom == nil {
+		return fmt.Errorf("not in a room")
+	}
+
+	text = sanitize(text)
+	if len(text) == 0 {
+		return fmt.Errorf("message cannot be empty after sanitization")
+	}
+	if len(text) > maxMessageLength {
+		return fmt.Errorf("message too long (max %d characters)", maxMessageLength)
+	}
+
+	messageText := text
+
+	if a.currentRoom.EncryptionKey != nil {
+		encrypted, err := Encrypt(text, a.currentRoom.EncryptionKey)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt message: %w", err)
+		}
+		messageText = encrypted
+	}
+
+	msg := map[string]string{
+		"type":     string(MessageTypeText),
+		"text":     messageText,
+		"nickname": a.user.Nickname,
+	}
+
+	if err := a.topic.Publish(p2p.MessageTypeChat, msg); err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+
+	return nil
+}
+
+func (a *App) GetEvents() <-chan Event {
+	return a.events
+}
+
+func (a *App) GetCurrentRoom() *Room {
+	return a.currentRoom
+}
+
+func (a *App) GetPeers() []*PeerInfo {
+	a.peersMu.RLock()
+	defer a.peersMu.RUnlock()
+
+	peers := make([]*PeerInfo, 0, len(a.peers))
+	for _, p := range a.peers {
+		peers = append(peers, p)
+	}
+	return peers
+}
+
+func (a *App) Close() error {
+	logger.Info("Closing app")
+
+	if a.currentRoom != nil {
+		a.LeaveRoom()
+	}
+
+	a.cancel()
+	close(a.events)
+	return a.host.Close()
+}
+
+func (a *App) handlePeerDiscovery() {
+	for {
+		select {
+		case <-a.ctx.Done():
+			return
+		case peerInfo := <-a.host.GetPeerChan():
+			go a.onPeerDiscovered(peerInfo)
+		}
+	}
+}
+
+func (a *App) onPeerDiscovered(peerInfo peer.AddrInfo) {
+	logger.Debug("Peer discovered: %s", peerInfo.ID.String()[:8])
+
+	time.Sleep(500 * time.Millisecond)
+
+	md, err := a.host.RequestPeerMetadata(peerInfo.ID)
+	if err != nil {
+		logger.Warn("Failed to get metadata from peer %s: %v", peerInfo.ID.String()[:8], err)
+		return
+	}
+
+	nickname := sanitize(md.Nickname)
+	if len(nickname) == 0 {
+		nickname = "Unknown"
+	}
+	if len(nickname) > maxNicknameLength {
+		nickname = nickname[:maxNicknameLength]
+	}
+
+	status := md.Custom["status"]
+	if len(status) > 50 {
+		status = status[:50]
+	}
+
+	a.peersMu.Lock()
+	a.peers[peerInfo.ID] = &PeerInfo{
+		ID:       peerInfo.ID,
+		Nickname: nickname,
+		Status:   status,
+		LastSeen: time.Now(),
+		Metadata: md.Custom,
+	}
+	a.peersMu.Unlock()
+
+	logger.Info("Peer %s connected: %s", peerInfo.ID.String()[:8], md.Nickname)
+
+	a.events <- Event{
+		Type: EventPeerJoined,
+		Data: a.peers[peerInfo.ID],
+	}
+}
+
 func (a *App) readMessages() {
 	msgChan := a.topic.ReadMessages(a.ctx)
 	for msg := range msgChan {
@@ -329,9 +396,9 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		return err
 	}
 
-	if peerID == a.host.ID() {
-		return nil
-	}
+	// if peerID == a.host.ID() {
+	// 	return nil
+	// }
 
 	if !a.rateLimiter.Allow(peerID) {
 		logger.Warn("Rate limit exceeded for peer %s", peerID.String()[:8])
@@ -440,73 +507,6 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	}
 
 	return nil
-}
-
-func (a *App) SendMessage(text string) error {
-	if a.currentRoom == nil {
-		return fmt.Errorf("not in a room")
-	}
-
-	text = sanitize(text)
-	if len(text) == 0 {
-		return fmt.Errorf("message cannot be empty after sanitization")
-	}
-	if len(text) > maxMessageLength {
-		return fmt.Errorf("message too long (max %d characters)", maxMessageLength)
-	}
-
-	messageText := text
-
-	if a.currentRoom.EncryptionKey != nil {
-		encrypted, err := Encrypt(text, a.currentRoom.EncryptionKey)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt message: %w", err)
-		}
-		messageText = encrypted
-	}
-
-	msg := map[string]string{
-		"type":     string(MessageTypeText),
-		"text":     messageText,
-		"nickname": a.user.Nickname,
-	}
-
-	if err := a.topic.Publish(p2p.MessageTypeChat, msg); err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
-	}
-
-	return nil
-}
-
-func (a *App) GetEvents() <-chan Event {
-	return a.events
-}
-
-func (a *App) GetCurrentRoom() *Room {
-	return a.currentRoom
-}
-
-func (a *App) GetPeers() []*PeerInfo {
-	a.peersMu.RLock()
-	defer a.peersMu.RUnlock()
-
-	peers := make([]*PeerInfo, 0, len(a.peers))
-	for _, p := range a.peers {
-		peers = append(peers, p)
-	}
-	return peers
-}
-
-func (a *App) Close() error {
-	logger.Info("Closing app")
-
-	if a.currentRoom != nil {
-		a.LeaveRoom()
-	}
-
-	a.cancel()
-	close(a.events)
-	return a.host.Close()
 }
 
 func sanitize(text string) string {

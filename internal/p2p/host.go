@@ -67,7 +67,6 @@ func NewHost(ctx context.Context) (*Host, error) {
 
 // StartDiscovery starts mDNS peer discovery for local network
 func (h *Host) StartDiscovery(rendezvous string) error {
-	// local network discovery
 	mdnsService := mdns.NewMdnsService(h, rendezvous, &discoveryNotifee{h: h})
 	if err := mdnsService.Start(); err != nil {
 		return fmt.Errorf("failed to start mDNS: %w", err)
