@@ -483,9 +483,6 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	case MessageTypeJoin:
 		logger.Debug("Peer %s joined room", nickname)
 		if peerInfo != nil {
-			if peerInfo.ID == a.host.ID() {
-				return nil
-			}
 			a.currentRoom.Peers[peerID] = peerInfo
 		}
 
@@ -503,10 +500,6 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	case MessageTypeLeave:
 		logger.Debug("Peer %s left room", nickname)
 		delete(a.currentRoom.Peers, peerID)
-
-		if peerInfo.ID == a.host.ID() {
-			return nil
-		}
 
 		chatMsg := &ChatMessage{
 			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
