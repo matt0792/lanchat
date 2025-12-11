@@ -345,8 +345,10 @@ func (a *App) isPeerMuted(peerId peer.ID) bool {
 	peers := a.GetPeers()
 
 	for _, p := range peers {
-		if value, exists := p.Metadata["is_muted"]; exists {
-			return value == "true"
+		if p.ID == peerId {
+			if value, exists := p.Metadata["is_muted"]; exists {
+				return value == "true"
+			}
 		}
 	}
 	return false

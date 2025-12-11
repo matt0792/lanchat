@@ -54,18 +54,19 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	}
 
 	n.h.mu.Lock()
-	if _, exists := n.h.peers[pi.ID]; !exists {
-		n.h.peers[pi.ID] = pi
-		n.h.mu.Unlock()
+	_, exists := n.h.peers[pi.ID]
+	n.h.mu.Unlock()
 
+	if !exists {
 		logger.Debug("mDNS discovered peer: %s", pi.ID.String()[:8])
 		if err := n.h.Connect(n.h.ctx, pi); err != nil {
 			logger.Warn("Failed to connect to mDNS peer %s: %v", pi.ID.String()[:8], err)
 		} else {
 			logger.Info("Connected to mDNS peer: %s", pi.ID.String()[:8])
+			n.h.mu.Lock()
+			n.h.peers[pi.ID] = pi
+			n.h.mu.Unlock()
 			n.h.peerChan <- pi
 		}
-	} else {
-		n.h.mu.Unlock()
 	}
 }
