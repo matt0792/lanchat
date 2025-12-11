@@ -12,8 +12,8 @@ type Lanchat struct {
 	logger  Logger
 }
 
-func New(ctx context.Context, nickname string, handler EventHandler, logger Logger) (*Lanchat, error) {
-	app, err := app.NewApp(ctx, nickname)
+func New(ctx context.Context, nickname, domain string, handler EventHandler, logger Logger) (*Lanchat, error) {
+	app, err := app.NewApp(ctx, nickname, domain)
 	if err != nil {
 		return nil, err
 	}

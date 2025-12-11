@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateDefault(t *testing.T) {
-	app, err := New(context.Background(), "test", nil, nil)
+	app, err := New(context.Background(), "test", "test", nil, nil)
 	if err != nil {
 		t.Errorf("failed to create app: %s", err)
 	}
@@ -45,7 +45,7 @@ func TestMessageRoundTrip(t *testing.T) {
 	ctx := context.Background()
 
 	handler1 := newTestHandler()
-	app1, err := New(ctx, "testUser1", handler1, nil)
+	app1, err := New(ctx, "testUser1", "test", handler1, nil)
 	if err != nil {
 		t.Fatalf("failed to create app1: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestMessageRoundTrip(t *testing.T) {
 	go app1.HandleEvents()
 
 	handler2 := newTestHandler()
-	app2, err := New(ctx, "testUser2", handler2, nil)
+	app2, err := New(ctx, "testUser2", "test", handler2, nil)
 	if err != nil {
 		t.Fatalf("failed to create app2: %v", err)
 	}

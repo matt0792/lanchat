@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/matt0792/lanchat/internal/app"
@@ -22,16 +25,22 @@ func main() {
 	)
 	defer cancel()
 
-	nickname := getNickname()
+	scanner := bufio.NewScanner(os.Stdin)
 
-	chatApp, err := app.NewApp(ctx, nickname)
+	nickname := getInput(scanner, "Name: ")
+	domain := getInput(scanner, "Domain (empty for default): ")
+	domain = strings.ReplaceAll(domain, " ", "")
+	if domain == "" {
+		domain = "lanchat"
+	}
+
+	chatApp, err := app.NewApp(ctx, nickname, domain)
 	if err != nil {
 		fmt.Printf("Failed to start: %v\n", err)
 		return
 	}
 	defer chatApp.Close()
 
-	// TODO hot-swap ui
 	var userInterface ui.UI
 	userInterface = cli.New(ctx)
 
@@ -40,9 +49,10 @@ func main() {
 	controller.Start()
 }
 
-func getNickname() string {
-	var name string
-	fmt.Print("Name: ")
-	fmt.Scan(&name)
-	return name
+func getInput(scanner *bufio.Scanner, prompt string) string {
+	fmt.Print(prompt)
+	if !scanner.Scan() {
+		return ""
+	}
+	return strings.TrimSpace(scanner.Text())
 }

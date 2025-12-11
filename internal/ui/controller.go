@@ -61,7 +61,7 @@ func (c *Controller) handleCommand(cmd Command) error {
 	case "help":
 		helpText := `
 Available Commands:
-  /join <room> [password]  	- Join a chat room
+  /join <room> [password]  		- Join a room
   /leave        			- Leave the current room
   /peers        			- List all connected peers
   /rooms        			- List all available rooms
@@ -96,20 +96,16 @@ func (c *Controller) handleAppEvents() {
 			switch msg.Type {
 			case app.MessageTypeText:
 				c.ui.ShowMessage(msg.Nickname, msg.Content)
+			case app.MessageTypeJoin:
+				c.ui.ShowPeerJoined(msg.Nickname)
+			case app.MessageTypeLeave:
+				c.ui.ShowPeerLeft(msg.Nickname)
 			}
-
-		case app.EventPeerJoined:
-			peer := event.Data.(*app.PeerInfo)
-			c.ui.ShowPeerJoined(peer.Nickname)
-
-		case app.EventPeerLeft:
-			peer := event.Data.(*app.PeerInfo)
-			c.ui.ShowPeerLeft(peer.Nickname)
-
-		case app.EventRoomJoined:
-			room := event.Data.(*app.Room)
-			c.ui.ShowSystemMessage(fmt.Sprintf("You joined: %s", room.Name))
+		case app.EventSystemMessage:
+			msg := event.Data.(string)
+			c.ui.ShowSystemMessage(msg)
 		}
+
 	}
 }
 

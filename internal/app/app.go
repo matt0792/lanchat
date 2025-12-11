@@ -26,7 +26,7 @@ const (
 const (
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	digits  = "0123456789"
-	symbols = "-_/!:?() "
+	symbols = "-_/!:?()',. "
 	allowed = letters + digits + symbols
 )
 
@@ -50,7 +50,7 @@ type App struct {
 	events chan Event
 }
 
-func NewApp(ctx context.Context, nickname string) (*App, error) {
+func NewApp(ctx context.Context, nickname string, domain string) (*App, error) {
 	appCtx, cancel := context.WithCancel(ctx)
 
 	nickname = sanitize(nickname)
@@ -93,7 +93,7 @@ func NewApp(ctx context.Context, nickname string) (*App, error) {
 	}
 
 	// start discovery
-	if err := host.StartDiscovery("chatv1"); err != nil {
+	if err := host.StartDiscovery(domain); err != nil {
 		cancel()
 		host.Close()
 		return nil, fmt.Errorf("failed to start discovery: %w", err)
@@ -290,6 +290,17 @@ func (a *App) SendMessage(text string) error {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
 
+	// chatMsg := &ChatMessage{
+	// 	ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+	// 	From:      a.host.ID(),
+	// 	Nickname:  a.user.Nickname,
+	// 	Content:   text,
+	// 	Timestamp: time.Now(),
+	// 	Type:      MessageTypeText,
+	// }
+	// a.currentRoom.Messages = append(a.currentRoom.Messages, chatMsg)
+	// a.events <- Event{Type: EventMessageRecv, Data: chatMsg}
+
 	return nil
 }
 
@@ -472,6 +483,9 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	case MessageTypeJoin:
 		logger.Debug("Peer %s joined room", nickname)
 		if peerInfo != nil {
+			if peerInfo.ID == a.host.ID() {
+				return nil
+			}
 			a.currentRoom.Peers[peerID] = peerInfo
 		}
 
@@ -489,6 +503,10 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	case MessageTypeLeave:
 		logger.Debug("Peer %s left room", nickname)
 		delete(a.currentRoom.Peers, peerID)
+
+		if peerInfo.ID == a.host.ID() {
+			return nil
+		}
 
 		chatMsg := &ChatMessage{
 			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),

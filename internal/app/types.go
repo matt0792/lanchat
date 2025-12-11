@@ -55,9 +55,10 @@ type Event struct {
 type EventType string
 
 const (
-	EventPeerJoined   EventType = "peer_joined"
-	EventPeerLeft     EventType = "peer_left"
-	EventMessageRecv  EventType = "message_received"
-	EventRoomJoined   EventType = "room_joined"
-	EventStatusChange EventType = "status_change"
+	EventPeerJoined    EventType = "peer_joined"
+	EventPeerLeft      EventType = "peer_left"
+	EventMessageRecv   EventType = "message_received"
+	EventRoomJoined    EventType = "room_joined"
+	EventStatusChange  EventType = "status_change"
+	EventSystemMessage EventType = "system_message"
 )
