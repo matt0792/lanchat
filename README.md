@@ -32,6 +32,28 @@ go build -o lanchat cmd/main.go
 /quit                    - Exit
 ```
 
+## Bot Support
+
+Bots can join rooms and respond to messages/events programmatically using the SDK.
+
+**Bot interface:**
+```go
+type Bot interface {
+    Initialize(lc *Lanchat) error
+    OnMessage(msg ChatMessage, lc *Lanchat) error
+    OnPeerJoined(peer PeerInfo, lc *Lanchat) error
+    OnRoomJoined(room Room, lc *Lanchat) error
+}
+```
+
+**Usage**
+- Implement the `Bot` interface
+- Use `BotRunner` to connect to the network
+- Bots receive events (messages, peer joins, room joins)
+- Bots can send messages and interact with the Lanchat instance
+
+See `bots/templatebot.go` for a starting point.
+
 ## Safety
 
 This is a toy for trusted networks, not a secure messenger.
@@ -43,9 +65,6 @@ This is a toy for trusted networks, not a secure messenger.
 - Transport-level encryption (libp2p)
 
 **Limitations:**
-- No authentication 
-- No forward secrecy 
-- No protection against malicious peers on your LAN 
-
-
-
+- No authentication
+- No forward secrecy
+- No protection against malicious peers on your LAN

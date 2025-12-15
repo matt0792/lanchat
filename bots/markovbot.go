@@ -11,12 +11,11 @@ import (
 )
 
 type MarkovBot struct {
-	mu          sync.RWMutex
-	chain       map[string]map[string]int
-	starters    map[string]int
-	messageLog  []string
-	active      bool
-	personality string
+	mu         sync.RWMutex
+	chain      map[string]map[string]int
+	starters   map[string]int
+	messageLog []string
+	active     bool
 }
 
 func (b *MarkovBot) Initialize(lc *sdk.Lanchat) error {
@@ -24,7 +23,6 @@ func (b *MarkovBot) Initialize(lc *sdk.Lanchat) error {
 	b.starters = make(map[string]int)
 	b.messageLog = make([]string, 0)
 	b.active = true
-	b.personality = "balanced"
 
 	rand.Seed(time.Now().UnixNano())
 
