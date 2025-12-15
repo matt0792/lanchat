@@ -41,11 +41,9 @@ type ChatMessage struct {
 type MessageType string
 
 const (
-	MessageTypeText   MessageType = "text"
-	MessageTypeJoin   MessageType = "join"
-	MessageTypeLeave  MessageType = "leave"
-	MessageTypeTyping MessageType = "typing"
-	MessageTypeStatus MessageType = "status"
+	MessageTypeText  MessageType = "text"
+	MessageTypeJoin  MessageType = "join"
+	MessageTypeLeave MessageType = "leave"
 )
 
 type Event struct {
