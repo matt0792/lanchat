@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	maxMessageLength  = 100
+	maxMessageLength  = 300
 	maxNicknameLength = 30
 	maxRoomNameLength = 30
 
@@ -481,6 +481,8 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		}
 	}
 
+	identity := GetIdentity(peerInfo.ID)
+
 	switch msgType {
 	case MessageTypeJoin:
 		logger.Debug("Peer %s joined room", nickname)
@@ -491,6 +493,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		chatMsg := &ChatMessage{
 			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 			From:      peerID,
+			Identity:  identity,
 			Nickname:  nickname,
 			Content:   fmt.Sprintf("%s joined the room", nickname),
 			Timestamp: msg.Timestamp,
@@ -506,6 +509,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		chatMsg := &ChatMessage{
 			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 			From:      peerID,
+			Identity:  identity,
 			Nickname:  nickname,
 			Content:   fmt.Sprintf("%s left the room", nickname),
 			Timestamp: msg.Timestamp,
@@ -544,6 +548,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		chatMsg := &ChatMessage{
 			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 			From:      peerID,
+			Identity:  identity,
 			Nickname:  nickname,
 			Content:   text,
 			Timestamp: msg.Timestamp,

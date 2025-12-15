@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 
 	"golang.org/x/crypto/pbkdf2"
@@ -70,4 +71,10 @@ func Decrypt(ciphertext string, key []byte) (string, error) {
 	}
 
 	return string(plaintext), nil
+}
+
+func getHash(data string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(data))
+	return hex.EncodeToString(hasher.Sum(nil))
 }

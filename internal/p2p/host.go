@@ -65,7 +65,6 @@ func NewHost(ctx context.Context) (*Host, error) {
 	return p2pHost, nil
 }
 
-// StartDiscovery starts mDNS peer discovery for local network
 func (h *Host) StartDiscovery(rendezvous string) error {
 	mdnsService := mdns.NewMdnsService(h, rendezvous, &discoveryNotifee{h: h})
 	if err := mdnsService.Start(); err != nil {
@@ -80,7 +79,6 @@ func (h *Host) GetPeerChan() <-chan peer.AddrInfo {
 	return h.peerChan
 }
 
-// GetPeers returns all currently known peers
 func (h *Host) GetPeers() []peer.AddrInfo {
 	h.mu.RLock()
 	defer h.mu.Unlock()
@@ -98,7 +96,6 @@ func (h *Host) RegisterMessageHandler(msgType MessageType, handler MessageHandle
 	h.msgHandlers[msgType] = handler
 }
 
-// Close shuts down host
 func (h *Host) Close() error {
 	h.cancel()
 	return h.Host.Close()

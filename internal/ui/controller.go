@@ -95,11 +95,11 @@ func (c *Controller) handleAppEvents() {
 			msg := event.Data.(*app.ChatMessage)
 			switch msg.Type {
 			case app.MessageTypeText:
-				c.ui.ShowMessage(msg.Nickname, msg.Content)
+				c.ui.ShowMessage(msg.Nickname, msg.Identity, msg.Content)
 			case app.MessageTypeJoin:
-				c.ui.ShowPeerJoined(msg.Nickname)
+				c.ui.ShowPeerJoined(msg.Nickname, msg.Identity)
 			case app.MessageTypeLeave:
-				c.ui.ShowPeerLeft(msg.Nickname)
+				c.ui.ShowPeerLeft(msg.Nickname, msg.Identity)
 			}
 		case app.EventSystemMessage:
 			msg := event.Data.(string)

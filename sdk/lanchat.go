@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/matt0792/lanchat/internal/app"
 )
@@ -10,6 +11,7 @@ type Lanchat struct {
 	app     *app.App
 	handler EventHandler
 	logger  Logger
+	bots    []Bot
 }
 
 func New(ctx context.Context, nickname, domain string, handler EventHandler, logger Logger) (*Lanchat, error) {
@@ -33,6 +35,11 @@ func New(ctx context.Context, nickname, domain string, handler EventHandler, log
 	}
 
 	return lc, nil
+}
+
+func (l *Lanchat) RegisterBot(bot Bot) error {
+	l.bots = append(l.bots, bot)
+	return bot.Initialize(l)
 }
 
 func (l *Lanchat) JoinRoom(roomName, password string) error {
@@ -59,13 +66,34 @@ func (l *Lanchat) HandleEvents() {
 	for event := range l.app.GetEvents() {
 		switch event.Type {
 		case app.EventMessageRecv:
-			l.handler.HandleMessageRecv(convertChatMessage(event.Data.(*app.ChatMessage)))
+			msg := convertChatMessage(event.Data.(*app.ChatMessage))
+			l.handler.HandleMessageRecv(msg)
+
+			for _, bot := range l.bots {
+				if err := bot.OnMessage(*msg, l); err != nil {
+					l.logger.LogError(fmt.Sprintf("bot error: %s", err.Error()))
+				}
+			}
 
 		case app.EventPeerJoined:
-			l.handler.HandlePeerJoined(convertPeerInfo(event.Data.(*app.PeerInfo)))
+			peerInfo := convertPeerInfo(event.Data.(*app.PeerInfo))
+			l.handler.HandlePeerJoined(peerInfo)
+
+			for _, bot := range l.bots {
+				if err := bot.OnPeerJoined(*peerInfo, l); err != nil {
+					l.logger.LogError(fmt.Sprintf("bot error: %s", err.Error()))
+				}
+			}
 
 		case app.EventRoomJoined:
-			l.handler.HandleRoomJoined(convertRoom(event.Data.(*app.Room)))
+			room := convertRoom(event.Data.(*app.Room))
+			l.handler.HandleRoomJoined(room)
+
+			for _, bot := range l.bots {
+				if err := bot.OnRoomJoined(*room, l); err != nil {
+					l.logger.LogError(fmt.Sprintf("bot error: %s", err.Error()))
+				}
+			}
 		}
 	}
 }

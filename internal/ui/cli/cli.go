@@ -36,28 +36,28 @@ func clearLine() {
 	fmt.Print("\r\033[K")
 }
 
-func (c *CLI) ShowMessage(nickname, message string) {
+func (c *CLI) ShowMessage(nickname, identity, message string) {
 	clearLine()
-	fmt.Printf("\n%s %s%s%s\n", nickname, colorGray, time.Now().Format("15:04"), colorReset)
+	fmt.Printf("\n%s %s%s\t%s%s\n", nickname, colorGray, identity, time.Now().Format("15:04"), colorReset)
 	fmt.Printf("%s\n", message)
 	c.ShowPrompt()
 }
 
 func (c *CLI) ShowSystemMessage(message string) {
 	clearLine()
-	fmt.Printf("\n%s\n", message)
+	fmt.Printf("\n%s%s%s\n", colorGray, message, colorReset)
 	c.ShowPrompt()
 }
 
-func (c *CLI) ShowPeerJoined(nickname string) {
+func (c *CLI) ShowPeerJoined(nickname, identity string) {
 	clearLine()
-	fmt.Printf("\n%s joined\n", nickname)
+	fmt.Printf("\n%s%s %s joined%s\n", colorGray, nickname, identity, colorReset)
 	c.ShowPrompt()
 }
 
-func (c *CLI) ShowPeerLeft(nickname string) {
+func (c *CLI) ShowPeerLeft(nickname, identity string) {
 	clearLine()
-	fmt.Printf("\n%s left\n", nickname)
+	fmt.Printf("\n%s%s %s left%s\n", colorGray, nickname, identity, colorReset)
 	c.ShowPrompt()
 }
 

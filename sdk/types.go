@@ -144,3 +144,10 @@ func (h *BaseEventHandler) HandleMessageRecv(msg *ChatMessage) {}
 func (h *BaseEventHandler) HandlePeerJoined(peerInfo *PeerInfo) {}
 
 func (h *BaseEventHandler) HandleRoomJoined(room *Room) {}
+
+type Bot interface {
+	Initialize(lc *Lanchat) error
+	OnMessage(msg ChatMessage, lc *Lanchat) error
+	OnPeerJoined(peer PeerInfo, lc *Lanchat) error
+	OnRoomJoined(room Room, lc *Lanchat) error
+}

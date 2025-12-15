@@ -31,6 +31,7 @@ type Room struct {
 type ChatMessage struct {
 	ID        string
 	From      peer.ID
+	Identity  string
 	Nickname  string
 	Content   string
 	Timestamp time.Time
