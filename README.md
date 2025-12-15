@@ -19,7 +19,7 @@ go install cmd/lanchat/main.go
 
 **Start the app:**
 ```bash
-./lanchat 
+lanchat 
 ```
 
 **Basic commands:**
