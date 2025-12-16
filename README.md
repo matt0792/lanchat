@@ -54,6 +54,16 @@ type Bot interface {
 
 See `bots/templatebot.go` for a starting point.
 
+```go
+func main() {
+	bot := &bots.TemplateBot{}
+	runner := sdk.NewBotRunner(bot)
+	if err := runner.Run(context.TODO(), "myBot", "lanchat"); err != nil {
+		panic(err)
+	}
+}
+```
+
 ## Safety
 
 This is a toy for trusted networks, not a secure messenger.
