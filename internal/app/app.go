@@ -100,6 +100,7 @@ func NewApp(ctx context.Context, nickname string, domain string) (*App, error) {
 	}
 
 	go app.handlePeerDiscovery()
+	go app.handlePeerEvents()
 	go app.startRateLimiterCleanup()
 
 	logger.Info("app initialized for user: %s (ID: %s)", nickname, host.ID().String()[:8])
@@ -290,17 +291,6 @@ func (a *App) SendMessage(text string) error {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
 
-	// chatMsg := &ChatMessage{
-	// 	ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-	// 	From:      a.host.ID(),
-	// 	Nickname:  a.user.Nickname,
-	// 	Content:   text,
-	// 	Timestamp: time.Now(),
-	// 	Type:      MessageTypeText,
-	// }
-	// a.currentRoom.Messages = append(a.currentRoom.Messages, chatMsg)
-	// a.events <- Event{Type: EventMessageRecv, Data: chatMsg}
-
 	return nil
 }
 
@@ -372,23 +362,59 @@ func (a *App) handlePeerDiscovery() {
 		case <-a.ctx.Done():
 			return
 		case peerInfo := <-a.host.GetPeerChan():
-			go a.onPeerDiscovered(peerInfo)
+			// connect, let network events handle rest
+			if err := a.host.Connect(a.ctx, peerInfo); err != nil {
+				logger.Debug("Failed to connect to peer %s: %v", peerInfo.ID.String()[:8], err)
+			}
 		}
 	}
 }
 
-func (a *App) onPeerDiscovered(peerInfo peer.AddrInfo) {
-	if a.isPeerMuted(peerInfo.ID) {
+func (a *App) handlePeerEvents() {
+	for {
+		select {
+		case <-a.ctx.Done():
+			return
+		case event := <-a.host.GetPeerEventChan():
+			switch event.Type {
+			case p2p.PeerEventConnected:
+				go a.onPeerConnected(event.PeerId)
+			case p2p.PeerEventDisconnected:
+				a.removePeer(event.PeerId)
+			}
+		}
+	}
+}
+
+func (a *App) removePeer(peerId peer.ID) {
+	a.peersMu.Lock()
+	peer, exists := a.peers[peerId]
+	if exists {
+		delete(a.peers, peerId)
+	}
+	a.peersMu.Unlock()
+
+	if exists {
+		logger.Info("Peer %s disconnected: %s", peerId.String()[:8], peer.Nickname)
+		a.events <- Event{
+			Type: EventPeerLeft,
+			Data: peer,
+		}
+	}
+}
+
+func (a *App) onPeerConnected(peerId peer.ID) {
+	if a.isPeerMuted(peerId) {
 		return
 	}
 
-	logger.Debug("Peer discovered: %s", peerInfo.ID.String()[:8])
+	logger.Debug("Peer connected: %s", peerId.String()[:8])
 
 	time.Sleep(500 * time.Millisecond)
 
-	md, err := a.host.RequestPeerMetadata(peerInfo.ID)
+	md, err := a.host.RequestPeerMetadata(peerId)
 	if err != nil {
-		logger.Warn("Failed to get metadata from peer %s: %v", peerInfo.ID.String()[:8], err)
+		logger.Warn("Failed to get metadata from peer %s: %v", peerId.String()[:8], err)
 		return
 	}
 
@@ -406,8 +432,8 @@ func (a *App) onPeerDiscovered(peerInfo peer.AddrInfo) {
 	}
 
 	a.peersMu.Lock()
-	a.peers[peerInfo.ID] = &PeerInfo{
-		ID:       peerInfo.ID,
+	a.peers[peerId] = &PeerInfo{
+		ID:       peerId,
 		Nickname: nickname,
 		Status:   status,
 		LastSeen: time.Now(),
@@ -415,11 +441,11 @@ func (a *App) onPeerDiscovered(peerInfo peer.AddrInfo) {
 	}
 	a.peersMu.Unlock()
 
-	logger.Info("Peer %s connected: %s", peerInfo.ID.String()[:8], md.Nickname)
+	logger.Info("Peer %s connected: %s", peerId.String()[:8], md.Nickname)
 
 	a.events <- Event{
 		Type: EventPeerJoined,
-		Data: a.peers[peerInfo.ID],
+		Data: a.peers[peerId],
 	}
 }
 

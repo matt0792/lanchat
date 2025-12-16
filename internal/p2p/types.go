@@ -70,3 +70,15 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 		}
 	}
 }
+
+type PeerEvent struct {
+	PeerId peer.ID
+	Type   PeerEventType
+}
+
+type PeerEventType string
+
+const (
+	PeerEventConnected    PeerEventType = "connected"
+	PeerEventDisconnected PeerEventType = "disconnected"
+)
