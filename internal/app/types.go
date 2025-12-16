@@ -1,6 +1,7 @@
 package app
 
 import (
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -26,6 +27,7 @@ type Room struct {
 	Messages      []*ChatMessage
 	Password      string
 	EncryptionKey []byte
+	mu            sync.RWMutex
 }
 
 type ChatMessage struct {

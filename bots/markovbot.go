@@ -24,8 +24,6 @@ func (b *MarkovBot) Initialize(lc *sdk.Lanchat) error {
 	b.messageLog = make([]string, 0)
 	b.active = true
 
-	rand.Seed(time.Now().UnixNano())
-
 	return lc.JoinRoom("general", "")
 }
 

@@ -21,6 +21,8 @@ const (
 
 	rateLimitAmount = 20
 	rateLimitWindow = 10 * time.Second
+
+	maxMessagesPerRoom = 50
 )
 
 const (
@@ -120,6 +122,7 @@ func (a *App) JoinRoom(roomName, password string) error {
 	if a.currentRoom != nil {
 		if err := a.LeaveRoom(); err != nil {
 			logger.Warn("Error leaving current room: %v", err)
+			return fmt.Errorf("failed to leave room")
 		}
 	}
 
@@ -432,20 +435,21 @@ func (a *App) onPeerConnected(peerId peer.ID) {
 	}
 
 	a.peersMu.Lock()
-	a.peers[peerId] = &PeerInfo{
+	peerInfo := &PeerInfo{
 		ID:       peerId,
 		Nickname: nickname,
 		Status:   status,
 		LastSeen: time.Now(),
 		Metadata: md.Custom,
 	}
+	a.peers[peerId] = peerInfo
 	a.peersMu.Unlock()
 
 	logger.Info("Peer %s connected: %s", peerId.String()[:8], md.Nickname)
 
 	a.events <- Event{
 		Type: EventPeerJoined,
-		Data: a.peers[peerId],
+		Data: peerInfo,
 	}
 }
 
@@ -507,7 +511,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		}
 	}
 
-	identity := GetIdentity(peerInfo.ID)
+	identity := GetIdentity(peerID)
 
 	switch msgType {
 	case MessageTypeJoin:
@@ -525,7 +529,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 			Timestamp: msg.Timestamp,
 			Type:      MessageTypeJoin,
 		}
-		a.currentRoom.Messages = append(a.currentRoom.Messages, chatMsg)
+		a.addMessageToRoom(chatMsg)
 		a.events <- Event{Type: EventMessageRecv, Data: chatMsg}
 
 	case MessageTypeLeave:
@@ -553,7 +557,7 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 		if a.currentRoom.EncryptionKey != nil {
 			decrypted, err := Decrypt(text, a.currentRoom.EncryptionKey)
 			if err != nil {
-				logger.Warn("Failed to decrypt message from %s (wrong password?): %w", nickname, err)
+				logger.Warn("Failed to decrypt message from %s (wrong password?): %v", nickname, err)
 				return nil
 			} else {
 				text = decrypted
@@ -587,6 +591,20 @@ func (a *App) handleChatMessage(msg *p2p.Message) error {
 	return nil
 }
 
+func (a *App) addMessageToRoom(msg *ChatMessage) {
+	if a.currentRoom == nil {
+		return
+	}
+
+	a.currentRoom.mu.Lock()
+	defer a.currentRoom.mu.Unlock()
+
+	a.currentRoom.Messages = append(a.currentRoom.Messages, msg)
+	if len(a.currentRoom.Messages) > maxMessagesPerRoom {
+		a.currentRoom.Messages = a.currentRoom.Messages[len(a.currentRoom.Messages)-maxMessagesPerRoom:]
+	}
+}
+
 func sanitize(text string) string {
 	return strings.Map(func(r rune) rune {
 		if strings.ContainsRune(allowed, r) {
@@ -597,8 +615,9 @@ func sanitize(text string) string {
 }
 
 func (a *App) startRateLimiterCleanup() {
-	ticker := time.NewTicker(5 * time.Minute)
 	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-a.ctx.Done():
