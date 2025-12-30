@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	colorReset = "\033[0m"
-	colorGray  = "\033[90m"
+	colorReset    = "\033[0m"
+	colorGray     = "\033[90m"
+	colorBoldGray = "\033[1;90m"
 )
 
 type CLI struct {
@@ -38,8 +39,9 @@ func clearLine() {
 
 func (c *CLI) ShowMessage(nickname, identity, message string) {
 	clearLine()
-	fmt.Printf("\n%s %s%s\t%s%s\n", nickname, colorGray, identity, time.Now().Format("15:04"), colorReset)
+	fmt.Printf("\n%s%s%s %s%s\t%s%s\n", colorBoldGray, nickname, colorReset, colorGray, identity, time.Now().Format("15:04"), colorReset)
 	fmt.Printf("%s\n", message)
+	c.showBreak()
 	c.ShowPrompt()
 }
 
@@ -84,6 +86,14 @@ func (c *CLI) ShowRoomList(rooms []string) {
 			fmt.Printf("  %s\n", room)
 		}
 	}
+	c.ShowPrompt()
+}
+
+func (c *CLI) showBreak() {
+	clearLine()
+
+	fmt.Printf("\n%s----------%s\n", colorGray, colorReset)
+
 	c.ShowPrompt()
 }
 
