@@ -12,7 +12,7 @@ Rooms can be password-protected with AES-256-GCM encryption, and are logically s
 ```bash
 git clone https://github.com/matt0792/lanchat.git
 
-go install cmd/lanchat/main.go
+go install cmd/lanchat
 ```
 
 ## Usage
